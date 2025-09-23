@@ -1,24 +1,21 @@
 .app-container {
-  padding: 20px;
-  font-family: Arial, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Roboto', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-header {
-  text-align: center;
-  margin-bottom: 30px;
-}
-
-header h1 {
-  color: #333;
-  margin-bottom: 10px;
-}
-
-header p {
-  color: #666;
-  font-style: italic;
-}
-
-main {
+.main-content {
+  flex: 1;
   max-width: 1200px;
   margin: 0 auto;
+  padding: 2rem 1rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    padding: 1rem 0.5rem;
+  }
 }

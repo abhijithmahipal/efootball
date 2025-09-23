@@ -1,0 +1,115 @@
+<header class="header">
+  <div class="header-container">
+    <div class="logo">
+      <a routerLink="/home" class="logo-link">
+        <h1>eFootball Tournament Manager</h1>
+      </a>
+    </div>
+
+    <nav class="nav">
+      <ul class="nav-list">
+        <li class="nav-item">
+          <a routerLink="/home" routerLinkActive="active" class="nav-link"
+            >Home</a
+          >
+        </li>
+        <li class="nav-item">
+          <a routerLink="/schedule" routerLinkActive="active" class="nav-link"
+            >Schedule</a
+          >
+        </li>
+        <li class="nav-item">
+          <a routerLink="/standings" routerLinkActive="active" class="nav-link"
+            >Standings</a
+          >
+        </li>
+        <li class="nav-item admin-link">
+          <a routerLink="/admin" routerLinkActive="active" class="nav-link"
+            >Admin</a
+          >
+        </li>
+        <li class="nav-item">
+          <a
+            routerLink="/admin/register"
+            routerLinkActive="active"
+            class="nav-link register-link"
+            >Register</a
+          >
+        </li>
+      </ul>
+    </nav>
+
+    <!-- Mobile menu button -->
+    <button
+      class="mobile-menu-btn"
+      (click)="toggleMobileMenu()"
+      [attr.aria-expanded]="isMobileMenuOpen"
+    >
+      <span class="sr-only">Open main menu</span>
+      <svg
+        class="menu-icon"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M4 6h16M4 12h16M4 18h16"
+        />
+      </svg>
+    </button>
+  </div>
+
+  <!-- Mobile menu -->
+  <div class="mobile-menu" [class.open]="isMobileMenuOpen">
+    <ul class="mobile-nav-list">
+      <li class="mobile-nav-item">
+        <a
+          routerLink="/home"
+          routerLinkActive="active"
+          class="mobile-nav-link"
+          (click)="closeMobileMenu()"
+          >Home</a
+        >
+      </li>
+      <li class="mobile-nav-item">
+        <a
+          routerLink="/schedule"
+          routerLinkActive="active"
+          class="mobile-nav-link"
+          (click)="closeMobileMenu()"
+          >Schedule</a
+        >
+      </li>
+      <li class="mobile-nav-item">
+        <a
+          routerLink="/standings"
+          routerLinkActive="active"
+          class="mobile-nav-link"
+          (click)="closeMobileMenu()"
+          >Standings</a
+        >
+      </li>
+      <li class="mobile-nav-item">
+        <a
+          routerLink="/admin"
+          routerLinkActive="active"
+          class="mobile-nav-link"
+          (click)="closeMobileMenu()"
+          >Admin</a
+        >
+      </li>
+      <li class="mobile-nav-item">
+        <a
+          routerLink="/admin/register"
+          routerLinkActive="active"
+          class="mobile-nav-link"
+          (click)="closeMobileMenu()"
+          >Register</a
+        >
+      </li>
+    </ul>
+  </div>
+</header>

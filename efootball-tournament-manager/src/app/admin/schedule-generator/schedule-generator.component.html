@@ -1,0 +1,233 @@
+<div class="schedule-generator-container">
+  <div class="header">
+    <h2>Tournament Schedule Generator</h2>
+    <p class="subtitle">
+      Create a round-robin tournament schedule for your players
+    </p>
+  </div>
+
+  <!-- Tournament Setup Form -->
+  <form [formGroup]="tournamentForm" class="tournament-form">
+    <!-- Tournament Name -->
+    <div class="form-group">
+      <label for="tournamentName">Tournament Name</label>
+      <input
+        id="tournamentName"
+        type="text"
+        formControlName="tournamentName"
+        class="form-control"
+        placeholder="Enter tournament name"
+        [class.error]="
+          tournamentForm.get('tournamentName')?.invalid &&
+          tournamentForm.get('tournamentName')?.touched
+        "
+      />
+      <div
+        class="error-message"
+        *ngIf="
+          tournamentForm.get('tournamentName')?.invalid &&
+          tournamentForm.get('tournamentName')?.touched
+        "
+      >
+        <span *ngIf="tournamentForm.get('tournamentName')?.errors?.['required']"
+          >Tournament name is required</span
+        >
+        <span
+          *ngIf="tournamentForm.get('tournamentName')?.errors?.['minlength']"
+          >Tournament name must be at least 3 characters</span
+        >
+      </div>
+    </div>
+
+    <!-- Player Selection -->
+    <div class="form-group">
+      <div class="player-selection-header">
+        <label>Select Players</label>
+        <div class="selection-actions">
+          <button
+            type="button"
+            class="btn btn-secondary btn-sm"
+            (click)="selectAllPlayers()"
+          >
+            Select All
+          </button>
+          <button
+            type="button"
+            class="btn btn-secondary btn-sm"
+            (click)="clearAllSelections()"
+          >
+            Clear All
+          </button>
+        </div>
+      </div>
+
+      <!-- Player Selection Info -->
+      <div class="selection-info">
+        <span class="selected-count">
+          {{ getSelectedPlayerCount() }} players selected
+        </span>
+        <span
+          class="minimum-requirement"
+          [class.met]="hasMinimumSelectedPlayers()"
+        >
+          (Minimum 5 required)
+        </span>
+      </div>
+
+      <!-- Player List -->
+      <div class="player-list" *ngIf="activePlayers$ | async as players">
+        <div class="empty-state" *ngIf="players.length === 0">
+          <p>No active players found. Please add players first.</p>
+          <a routerLink="/admin/players" class="btn btn-primary"
+            >Manage Players</a
+          >
+        </div>
+
+        <div class="player-grid" *ngIf="players.length > 0">
+          <div
+            *ngFor="let player of players"
+            class="player-card"
+            [class.selected]="isPlayerSelected(player)"
+            (click)="togglePlayerSelection(player)"
+          >
+            <div class="player-info">
+              <span class="player-name">{{ player.name }}</span>
+              <div class="selection-indicator">
+                <span class="checkmark" *ngIf="isPlayerSelected(player)"
+                  >✓</span
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Form Validation Error -->
+      <div
+        class="error-message"
+        *ngIf="
+          tournamentForm.get('selectedPlayers')?.invalid &&
+          tournamentForm.get('selectedPlayers')?.touched
+        "
+      >
+        <span
+          *ngIf="tournamentForm.get('selectedPlayers')?.errors?.['required']"
+          >Please select at least one player</span
+        >
+        <span
+          *ngIf="tournamentForm.get('selectedPlayers')?.errors?.['minimumPlayers']"
+          >At least 5 players are required for tournament generation</span
+        >
+      </div>
+    </div>
+  </form>
+
+  <!-- Generation Actions -->
+  <div class="generation-actions">
+    <button
+      type="button"
+      class="btn btn-primary btn-lg"
+      [disabled]="
+        tournamentForm.invalid ||
+        generationState.isGenerating ||
+        !hasMinimumSelectedPlayers()
+      "
+      (click)="generateSchedule()"
+    >
+      <span *ngIf="!generationState.isGenerating">Generate Schedule</span>
+      <span *ngIf="generationState.isGenerating">
+        <span class="spinner"></span>
+        Generating...
+      </span>
+    </button>
+
+    <button
+      type="button"
+      class="btn btn-danger"
+      [disabled]="generationState.isGenerating"
+      (click)="resetTournament()"
+    >
+      Reset Tournament
+    </button>
+  </div>
+
+  <!-- Progress Indicator -->
+  <div
+    class="progress-section"
+    *ngIf="
+      generationState.isGenerating ||
+      generationState.isComplete ||
+      generationState.error
+    "
+  >
+    <!-- Loading State -->
+    <div class="progress-indicator" *ngIf="generationState.isGenerating">
+      <div class="progress-bar">
+        <div class="progress-fill"></div>
+      </div>
+      <p class="progress-message">{{ getProgressMessage() }}</p>
+    </div>
+
+    <!-- Success State -->
+    <div
+      class="success-message"
+      *ngIf="generationState.isComplete && generationState.result"
+    >
+      <div class="success-icon">✓</div>
+      <h3>Schedule Generated Successfully!</h3>
+      <p>{{ getProgressMessage() }}</p>
+      <div class="generation-summary">
+        <div class="summary-item">
+          <span class="label">Total Matches:</span>
+          <span class="value">{{ generationState.result.totalMatches }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="label">Matchdays:</span>
+          <span class="value">{{ generationState.result.totalMatchdays }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="label">Players:</span>
+          <span class="value">{{ getSelectedPlayerCount() }}</span>
+        </div>
+      </div>
+      <div class="next-actions">
+        <a routerLink="/admin/match-results" class="btn btn-primary"
+          >Enter Match Results</a
+        >
+        <a routerLink="/schedule" class="btn btn-secondary">View Schedule</a>
+      </div>
+    </div>
+
+    <!-- Error State -->
+    <div class="error-state" *ngIf="generationState.error">
+      <div class="error-icon">⚠</div>
+      <h3>Generation Failed</h3>
+      <p class="error-text">{{ generationState.error }}</p>
+      <button
+        type="button"
+        class="btn btn-primary"
+        (click)="generateSchedule()"
+      >
+        Try Again
+      </button>
+    </div>
+  </div>
+
+  <!-- Tournament Info -->
+  <div
+    class="tournament-info"
+    *ngIf="!generationState.isGenerating && !generationState.isComplete"
+  >
+    <h3>How it works</h3>
+    <ul>
+      <li>
+        Each player will play against every other player twice (home and away)
+      </li>
+      <li>Matches are organized into matchdays for better scheduling</li>
+      <li>
+        The top 4 players will qualify for playoffs after the league phase
+      </li>
+      <li>You can enter match results after generating the schedule</li>
+    </ul>
+  </div>
+</div>

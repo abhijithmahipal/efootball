@@ -1,0 +1,194 @@
+<div class="player-management-container">
+  <div class="header">
+    <h1>Player Management</h1>
+    <p class="subtitle">Manage tournament players and roster</p>
+  </div>
+
+  <!-- Player Statistics -->
+  <div class="stats-section" *ngIf="players$ | async as players">
+    <div class="stat-card">
+      <div class="stat-number">{{ getActivePlayersCount(players) }}</div>
+      <div class="stat-label">Active Players</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number">{{ players.length }}</div>
+      <div class="stat-label">Total Players</div>
+    </div>
+    <div class="stat-card" [class.warning]="!(hasMinimumPlayers$ | async)">
+      <div class="stat-number">
+        {{ (hasMinimumPlayers$ | async) ? "✓" : "✗" }}
+      </div>
+      <div class="stat-label">Min. Players (5)</div>
+    </div>
+  </div>
+
+  <!-- Add/Edit Player Form -->
+  <div class="form-section">
+    <div class="form-header">
+      <h2>{{ editingPlayer ? "Edit Player" : "Add New Player" }}</h2>
+      <button
+        *ngIf="editingPlayer"
+        type="button"
+        class="btn btn-secondary"
+        (click)="cancelEdit()"
+      >
+        Cancel Edit
+      </button>
+    </div>
+
+    <form [formGroup]="playerForm" (ngSubmit)="onSubmit()" class="player-form">
+      <div class="form-group">
+        <label for="playerName">Player Name</label>
+        <input
+          type="text"
+          id="playerName"
+          formControlName="name"
+          class="form-control"
+          [class.invalid]="isFieldInvalid('name')"
+          placeholder="Enter player name"
+          autocomplete="off"
+        />
+        <div class="error-message" *ngIf="isFieldInvalid('name')">
+          {{ getFieldError("name") }}
+        </div>
+      </div>
+
+      <!-- Error Message -->
+      <div class="alert alert-error" *ngIf="errorMessage">
+        {{ errorMessage }}
+      </div>
+
+      <!-- Success Message -->
+      <div class="alert alert-success" *ngIf="successMessage">
+        {{ successMessage }}
+      </div>
+
+      <!-- Submit Button -->
+      <button
+        type="submit"
+        class="btn btn-primary"
+        [disabled]="isSubmitting || playerForm.invalid"
+      >
+        <span *ngIf="isSubmitting" class="loading-spinner"></span>
+        {{
+          isSubmitting
+            ? "Saving..."
+            : editingPlayer
+            ? "Update Player"
+            : "Add Player"
+        }}
+      </button>
+    </form>
+  </div>
+
+  <!-- Players List -->
+  <div class="players-section">
+    <h2>Players List</h2>
+
+    <div *ngIf="isLoading$ | async" class="loading-container">
+      <div class="loading-spinner large"></div>
+      <p>Loading players...</p>
+    </div>
+
+    <div *ngIf="!(isLoading$ | async)" class="players-content">
+      <div *ngIf="players$ | async as players; else noPlayers">
+        <div *ngIf="players.length > 0; else noPlayers" class="players-grid">
+          <div
+            *ngFor="let player of players; trackBy: trackByPlayerId"
+            class="player-card"
+            [class.inactive]="!isPlayerActive(player)"
+          >
+            <div class="player-info">
+              <div class="player-name">{{ player.name }}</div>
+              <div class="player-status">
+                <span
+                  class="status-badge"
+                  [class.active]="isPlayerActive(player)"
+                >
+                  {{ isPlayerActive(player) ? "Active" : "Inactive" }}
+                </span>
+              </div>
+              <div class="player-date">
+                Added: {{ player.createdAt | date : "short" }}
+              </div>
+            </div>
+
+            <div class="player-actions" *ngIf="isPlayerActive(player)">
+              <button
+                type="button"
+                class="btn btn-small btn-secondary"
+                (click)="editPlayer(player)"
+                [disabled]="isSubmitting"
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                class="btn btn-small btn-danger"
+                (click)="confirmDelete(player)"
+                [disabled]="isSubmitting"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <ng-template #noPlayers>
+        <div class="empty-state">
+          <div class="empty-icon">👥</div>
+          <h3>No Players Yet</h3>
+          <p>Add your first player to get started with the tournament.</p>
+        </div>
+      </ng-template>
+    </div>
+  </div>
+
+  <!-- Minimum Players Warning -->
+  <div class="warning-section" *ngIf="!(hasMinimumPlayers$ | async)">
+    <div class="alert alert-warning">
+      <strong>⚠️ Minimum Players Required</strong>
+      <p>
+        You need at least 5 active players to generate a tournament schedule.
+        Currently you have {{ (players$ | async)?.length || 0 }} active players.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal-overlay" *ngIf="showDeleteConfirm" (click)="cancelDelete()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Confirm Delete</h3>
+    </div>
+    <div class="modal-body">
+      <p>
+        Are you sure you want to delete
+        <strong>{{ playerToDelete?.name }}</strong
+        >?
+      </p>
+      <p class="warning-text">This action cannot be undone.</p>
+    </div>
+    <div class="modal-actions">
+      <button
+        type="button"
+        class="btn btn-secondary"
+        (click)="cancelDelete()"
+        [disabled]="isSubmitting"
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        class="btn btn-danger"
+        (click)="deletePlayer()"
+        [disabled]="isSubmitting"
+      >
+        <span *ngIf="isSubmitting" class="loading-spinner"></span>
+        {{ isSubmitting ? "Deleting..." : "Delete Player" }}
+      </button>
+    </div>
+  </div>
+</div>

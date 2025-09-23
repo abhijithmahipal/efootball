@@ -1,0 +1,121 @@
+<div class="schedule-container">
+  <div class="header">
+    <h1>Tournament Schedule</h1>
+    <p class="subtitle">
+      View all matches organized by matchdays and playoff rounds
+    </p>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading$ | async" class="loading-container">
+    <div class="loading-spinner"></div>
+    <p>Loading matches...</p>
+  </div>
+
+  <!-- Content when not loading -->
+  <div *ngIf="!(isLoading$ | async)" class="content">
+    <!-- League Matches Section -->
+    <section class="league-section">
+      <h2 class="section-title">League Matches</h2>
+
+      <div *ngIf="(leagueMatchdays$ | async)?.length === 0" class="no-matches">
+        <p>No league matches scheduled yet.</p>
+        <p class="hint">
+          Matches will appear here once the tournament schedule is generated.
+        </p>
+      </div>
+
+      <div
+        *ngFor="let matchdayGroup of leagueMatchdays$ | async"
+        class="matchday-group"
+      >
+        <h3 class="matchday-title">Matchday {{ matchdayGroup.matchday }}</h3>
+
+        <div class="matches-grid">
+          <div
+            *ngFor="let match of matchdayGroup.matches"
+            class="match-card"
+            [ngClass]="getMatchStatusClass(match)"
+          >
+            <div class="match-teams">
+              <div class="team home-team">
+                <span class="team-name">{{ match.homePlayerName }}</span>
+                <span class="team-label">(Home)</span>
+              </div>
+
+              <div class="match-vs">vs</div>
+
+              <div class="team away-team">
+                <span class="team-name">{{ match.awayPlayerName }}</span>
+                <span class="team-label">(Away)</span>
+              </div>
+            </div>
+
+            <div class="match-result">
+              <span class="result-text" [ngClass]="getMatchStatusClass(match)">
+                {{ getMatchStatus(match) }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Playoff Matches Section -->
+    <section
+      class="playoff-section"
+      *ngIf="(playoffGroups$ | async)?.length! > 0"
+    >
+      <h2 class="section-title">Playoff Matches</h2>
+
+      <div
+        *ngFor="let playoffGroup of playoffGroups$ | async"
+        class="playoff-round"
+      >
+        <h3 class="round-title">{{ playoffGroup.roundName }}</h3>
+
+        <div class="playoff-matches">
+          <div
+            *ngFor="let match of playoffGroup.matches"
+            class="playoff-match-card"
+            [ngClass]="getMatchStatusClass(match)"
+          >
+            <div class="playoff-teams">
+              <div class="playoff-team">
+                <span class="team-name">{{ match.homePlayerName }}</span>
+              </div>
+
+              <div class="playoff-vs">vs</div>
+
+              <div class="playoff-team">
+                <span class="team-name">{{ match.awayPlayerName }}</span>
+              </div>
+            </div>
+
+            <div class="playoff-result">
+              <span class="result-text" [ngClass]="getMatchStatusClass(match)">
+                {{ getMatchStatus(match) }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Empty State -->
+    <div
+      *ngIf="
+        (leagueMatchdays$ | async)?.length === 0 &&
+        (playoffGroups$ | async)?.length === 0
+      "
+      class="empty-state"
+    >
+      <div class="empty-icon">📅</div>
+      <h3>No Matches Scheduled</h3>
+      <p>The tournament schedule hasn't been generated yet.</p>
+      <p class="hint">
+        Contact the tournament administrator to set up the matches.
+      </p>
+    </div>
+  </div>
+</div>
