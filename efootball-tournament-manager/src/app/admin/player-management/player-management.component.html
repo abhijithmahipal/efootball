@@ -85,64 +85,66 @@
   <div class="players-section">
     <h2>Players List</h2>
 
-    <div *ngIf="isLoading$ | async" class="loading-container">
-      <div class="loading-spinner large"></div>
-      <p>Loading players...</p>
-    </div>
+    <app-loading-error
+      [customLoading]="isLoading$"
+      [customError]="error$"
+      (retry)="onRetry()"
+      loadingMessage="Loading players..."
+    >
+      <div class="players-content">
+        <div *ngIf="players$ | async as players; else noPlayers">
+          <div *ngIf="players.length > 0; else noPlayers" class="players-grid">
+            <div
+              *ngFor="let player of players; trackBy: trackByPlayerId"
+              class="player-card"
+              [class.inactive]="!isPlayerActive(player)"
+            >
+              <div class="player-info">
+                <div class="player-name">{{ player.name }}</div>
+                <div class="player-status">
+                  <span
+                    class="status-badge"
+                    [class.active]="isPlayerActive(player)"
+                  >
+                    {{ isPlayerActive(player) ? "Active" : "Inactive" }}
+                  </span>
+                </div>
+                <div class="player-date">
+                  Added: {{ player.createdAt | date : "short" }}
+                </div>
+              </div>
 
-    <div *ngIf="!(isLoading$ | async)" class="players-content">
-      <div *ngIf="players$ | async as players; else noPlayers">
-        <div *ngIf="players.length > 0; else noPlayers" class="players-grid">
-          <div
-            *ngFor="let player of players; trackBy: trackByPlayerId"
-            class="player-card"
-            [class.inactive]="!isPlayerActive(player)"
-          >
-            <div class="player-info">
-              <div class="player-name">{{ player.name }}</div>
-              <div class="player-status">
-                <span
-                  class="status-badge"
-                  [class.active]="isPlayerActive(player)"
+              <div class="player-actions" *ngIf="isPlayerActive(player)">
+                <button
+                  type="button"
+                  class="btn btn-small btn-secondary"
+                  (click)="editPlayer(player)"
+                  [disabled]="isSubmitting"
                 >
-                  {{ isPlayerActive(player) ? "Active" : "Inactive" }}
-                </span>
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-small btn-danger"
+                  (click)="confirmDelete(player)"
+                  [disabled]="isSubmitting"
+                >
+                  Delete
+                </button>
               </div>
-              <div class="player-date">
-                Added: {{ player.createdAt | date : "short" }}
-              </div>
-            </div>
-
-            <div class="player-actions" *ngIf="isPlayerActive(player)">
-              <button
-                type="button"
-                class="btn btn-small btn-secondary"
-                (click)="editPlayer(player)"
-                [disabled]="isSubmitting"
-              >
-                Edit
-              </button>
-              <button
-                type="button"
-                class="btn btn-small btn-danger"
-                (click)="confirmDelete(player)"
-                [disabled]="isSubmitting"
-              >
-                Delete
-              </button>
             </div>
           </div>
         </div>
-      </div>
 
-      <ng-template #noPlayers>
-        <div class="empty-state">
-          <div class="empty-icon">👥</div>
-          <h3>No Players Yet</h3>
-          <p>Add your first player to get started with the tournament.</p>
-        </div>
-      </ng-template>
-    </div>
+        <ng-template #noPlayers>
+          <div class="empty-state">
+            <div class="empty-icon">👥</div>
+            <h3>No Players Yet</h3>
+            <p>Add your first player to get started with the tournament.</p>
+          </div>
+        </ng-template>
+      </div>
+    </app-loading-error>
   </div>
 
   <!-- Minimum Players Warning -->

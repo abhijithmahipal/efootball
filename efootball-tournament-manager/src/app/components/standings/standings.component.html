@@ -7,219 +7,230 @@
   </div>
 
   <!-- Loading and Error Handling -->
-  <app-loading-error 
-    [customLoading]="isLoading$" 
+  <app-loading-error
+    [customLoading]="isLoading$"
     [customError]="error$"
     (retry)="onRetry()"
-    loadingMessage="Loading tournament standings...">
-    
+    loadingMessage="Loading tournament standings..."
+  >
     <!-- Content when loaded successfully -->
     <div class="content">
-    <!-- Standings Table -->
-    <div *ngIf="(standings$ | async)?.length! > 0" class="standings-section">
-      <!-- Legend -->
-      <div class="legend">
-        <div class="legend-item">
-          <span class="legend-badge playoff-position">1-4</span>
-          <span class="legend-text">Playoff Qualification</span>
-        </div>
-        <div class="legend-item">
-          <span class="legend-badge regular-position">5+</span>
-          <span class="legend-text">Regular Position</span>
-        </div>
-      </div>
-
-      <!-- Desktop Table -->
-      <div class="table-container desktop-table">
-        <table class="standings-table">
-          <thead>
-            <tr>
-              <th class="position-col">Pos</th>
-              <th class="player-col">Player</th>
-              <th class="matches-col">MP</th>
-              <th class="wins-col">W</th>
-              <th class="draws-col">D</th>
-              <th class="losses-col">L</th>
-              <th class="goals-for-col">GF</th>
-              <th class="goals-against-col">GA</th>
-              <th class="goal-diff-col">GD</th>
-              <th class="points-col">Pts</th>
-              <th class="form-col">Form</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              *ngFor="
-                let standing of standings$ | async;
-                trackBy: trackByPlayerId
-              "
-              class="standing-row"
-              [ngClass]="{
-                'playoff-qualifier': isPlayoffQualifier(standing.position)
-              }"
-            >
-              <td class="position-cell">
-                <div
-                  class="position-badge"
-                  [ngClass]="getPositionClass(standing.position)"
-                  [title]="getPositionTooltip(standing.position)"
-                >
-                  {{ standing.position }}
-                </div>
-              </td>
-
-              <td class="player-cell">
-                <div class="player-info">
-                  <span class="player-name">{{ standing.playerName }}</span>
-                  <div class="player-stats">
-                    <span class="stat-item"
-                      >{{ getPointsPerGame(standing) }} PPG</span
-                    >
-                    <span class="stat-item"
-                      >{{ getGoalsPerGame(standing) }} GPG</span
-                    >
-                  </div>
-                </div>
-              </td>
-
-              <td class="matches-cell">{{ standing.matchesPlayed }}</td>
-              <td class="wins-cell">{{ standing.wins }}</td>
-              <td class="draws-cell">{{ standing.draws }}</td>
-              <td class="losses-cell">{{ standing.losses }}</td>
-              <td class="goals-for-cell">{{ standing.goalsFor }}</td>
-              <td class="goals-against-cell">{{ standing.goalsAgainst }}</td>
-
-              <td class="goal-diff-cell">
-                <span
-                  class="goal-difference"
-                  [ngClass]="getGoalDifferenceClass(standing.goalDifference)"
-                >
-                  {{ formatGoalDifference(standing.goalDifference) }}
-                </span>
-              </td>
-
-              <td class="points-cell">
-                <span class="points-value">{{ standing.points }}</span>
-              </td>
-
-              <td class="form-cell">
-                <div
-                  class="form-indicator"
-                  [ngClass]="getFormIndicator(standing)"
-                >
-                  {{ getWinPercentage(standing) }}%
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Mobile Cards -->
-      <div class="mobile-cards">
-        <div
-          *ngFor="let standing of standings$ | async; trackBy: trackByPlayerId"
-          class="standing-card"
-          [ngClass]="{
-            'playoff-qualifier': isPlayoffQualifier(standing.position)
-          }"
-        >
-          <div class="card-header">
-            <div
-              class="position-badge"
-              [ngClass]="getPositionClass(standing.position)"
-            >
-              {{ standing.position }}
-            </div>
-            <div class="player-info">
-              <h3 class="player-name">{{ standing.playerName }}</h3>
-              <div class="points-display">{{ standing.points }} pts</div>
-            </div>
-            <div class="form-indicator" [ngClass]="getFormIndicator(standing)">
-              {{ getWinPercentage(standing) }}%
-            </div>
-          </div>
-
-          <div class="card-stats">
-            <div class="stat-row">
-              <div class="stat-group">
-                <span class="stat-label">Matches</span>
-                <span class="stat-value">{{ standing.matchesPlayed }}</span>
-              </div>
-              <div class="stat-group">
-                <span class="stat-label">Record</span>
-                <span class="stat-value"
-                  >{{ standing.wins }}-{{ standing.draws }}-{{
-                    standing.losses
-                  }}</span
-                >
-              </div>
-            </div>
-
-            <div class="stat-row">
-              <div class="stat-group">
-                <span class="stat-label">Goals</span>
-                <span class="stat-value"
-                  >{{ standing.goalsFor }}-{{ standing.goalsAgainst }}</span
-                >
-              </div>
-              <div class="stat-group">
-                <span class="stat-label">Difference</span>
-                <span
-                  class="stat-value goal-difference"
-                  [ngClass]="getGoalDifferenceClass(standing.goalDifference)"
-                >
-                  {{ formatGoalDifference(standing.goalDifference) }}
-                </span>
-              </div>
-            </div>
-
-            <div class="stat-row">
-              <div class="stat-group">
-                <span class="stat-label">PPG</span>
-                <span class="stat-value">{{ getPointsPerGame(standing) }}</span>
-              </div>
-              <div class="stat-group">
-                <span class="stat-label">GPG</span>
-                <span class="stat-value">{{ getGoalsPerGame(standing) }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Table Legend -->
-      <div class="table-legend">
-        <h4>Table Legend</h4>
-        <div class="legend-grid">
-          <div class="legend-item"><strong>MP:</strong> Matches Played</div>
-          <div class="legend-item"><strong>W:</strong> Wins</div>
-          <div class="legend-item"><strong>D:</strong> Draws</div>
-          <div class="legend-item"><strong>L:</strong> Losses</div>
-          <div class="legend-item"><strong>GF:</strong> Goals For</div>
-          <div class="legend-item"><strong>GA:</strong> Goals Against</div>
-          <div class="legend-item"><strong>GD:</strong> Goal Difference</div>
+      <!-- Standings Table -->
+      <div *ngIf="(standings$ | async)?.length! > 0" class="standings-section">
+        <!-- Legend -->
+        <div class="legend">
           <div class="legend-item">
-            <strong>Pts:</strong> Points (3 for win, 1 for draw)
+            <span class="legend-badge playoff-position">1-4</span>
+            <span class="legend-text">Playoff Qualification</span>
           </div>
-          <div class="legend-item"><strong>PPG:</strong> Points Per Game</div>
-          <div class="legend-item"><strong>GPG:</strong> Goals Per Game</div>
+          <div class="legend-item">
+            <span class="legend-badge regular-position">5+</span>
+            <span class="legend-text">Regular Position</span>
+          </div>
+        </div>
+
+        <!-- Desktop Table -->
+        <div class="table-container desktop-table">
+          <table class="standings-table">
+            <thead>
+              <tr>
+                <th class="position-col">Pos</th>
+                <th class="player-col">Player</th>
+                <th class="matches-col">MP</th>
+                <th class="wins-col">W</th>
+                <th class="draws-col">D</th>
+                <th class="losses-col">L</th>
+                <th class="goals-for-col">GF</th>
+                <th class="goals-against-col">GA</th>
+                <th class="goal-diff-col">GD</th>
+                <th class="points-col">Pts</th>
+                <th class="form-col">Form</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                *ngFor="
+                  let standing of standings$ | async;
+                  trackBy: trackByPlayerId
+                "
+                class="standing-row"
+                [ngClass]="{
+                  'playoff-qualifier': isPlayoffQualifier(standing.position)
+                }"
+              >
+                <td class="position-cell">
+                  <div
+                    class="position-badge"
+                    [ngClass]="getPositionClass(standing.position)"
+                    [title]="getPositionTooltip(standing.position)"
+                  >
+                    {{ standing.position }}
+                  </div>
+                </td>
+
+                <td class="player-cell">
+                  <div class="player-info">
+                    <span class="player-name">{{ standing.playerName }}</span>
+                    <div class="player-stats">
+                      <span class="stat-item"
+                        >{{ getPointsPerGame(standing) }} PPG</span
+                      >
+                      <span class="stat-item"
+                        >{{ getGoalsPerGame(standing) }} GPG</span
+                      >
+                    </div>
+                  </div>
+                </td>
+
+                <td class="matches-cell">{{ standing.matchesPlayed }}</td>
+                <td class="wins-cell">{{ standing.wins }}</td>
+                <td class="draws-cell">{{ standing.draws }}</td>
+                <td class="losses-cell">{{ standing.losses }}</td>
+                <td class="goals-for-cell">{{ standing.goalsFor }}</td>
+                <td class="goals-against-cell">{{ standing.goalsAgainst }}</td>
+
+                <td class="goal-diff-cell">
+                  <span
+                    class="goal-difference"
+                    [ngClass]="getGoalDifferenceClass(standing.goalDifference)"
+                  >
+                    {{ formatGoalDifference(standing.goalDifference) }}
+                  </span>
+                </td>
+
+                <td class="points-cell">
+                  <span class="points-value">{{ standing.points }}</span>
+                </td>
+
+                <td class="form-cell">
+                  <div
+                    class="form-indicator"
+                    [ngClass]="getFormIndicator(standing)"
+                  >
+                    {{ getWinPercentage(standing) }}%
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Mobile Cards -->
+        <div class="mobile-cards">
+          <div
+            *ngFor="
+              let standing of standings$ | async;
+              trackBy: trackByPlayerId
+            "
+            class="standing-card"
+            [ngClass]="{
+              'playoff-qualifier': isPlayoffQualifier(standing.position)
+            }"
+          >
+            <div class="card-header">
+              <div
+                class="position-badge"
+                [ngClass]="getPositionClass(standing.position)"
+              >
+                {{ standing.position }}
+              </div>
+              <div class="player-info">
+                <h3 class="player-name">{{ standing.playerName }}</h3>
+                <div class="points-display">{{ standing.points }} pts</div>
+              </div>
+              <div
+                class="form-indicator"
+                [ngClass]="getFormIndicator(standing)"
+              >
+                {{ getWinPercentage(standing) }}%
+              </div>
+            </div>
+
+            <div class="card-stats">
+              <div class="stat-row">
+                <div class="stat-group">
+                  <span class="stat-label">Matches</span>
+                  <span class="stat-value">{{ standing.matchesPlayed }}</span>
+                </div>
+                <div class="stat-group">
+                  <span class="stat-label">Record</span>
+                  <span class="stat-value"
+                    >{{ standing.wins }}-{{ standing.draws }}-{{
+                      standing.losses
+                    }}</span
+                  >
+                </div>
+              </div>
+
+              <div class="stat-row">
+                <div class="stat-group">
+                  <span class="stat-label">Goals</span>
+                  <span class="stat-value"
+                    >{{ standing.goalsFor }}-{{ standing.goalsAgainst }}</span
+                  >
+                </div>
+                <div class="stat-group">
+                  <span class="stat-label">Difference</span>
+                  <span
+                    class="stat-value goal-difference"
+                    [ngClass]="getGoalDifferenceClass(standing.goalDifference)"
+                  >
+                    {{ formatGoalDifference(standing.goalDifference) }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="stat-row">
+                <div class="stat-group">
+                  <span class="stat-label">PPG</span>
+                  <span class="stat-value">{{
+                    getPointsPerGame(standing)
+                  }}</span>
+                </div>
+                <div class="stat-group">
+                  <span class="stat-label">GPG</span>
+                  <span class="stat-value">{{
+                    getGoalsPerGame(standing)
+                  }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Table Legend -->
+        <div class="table-legend">
+          <h4>Table Legend</h4>
+          <div class="legend-grid">
+            <div class="legend-item"><strong>MP:</strong> Matches Played</div>
+            <div class="legend-item"><strong>W:</strong> Wins</div>
+            <div class="legend-item"><strong>D:</strong> Draws</div>
+            <div class="legend-item"><strong>L:</strong> Losses</div>
+            <div class="legend-item"><strong>GF:</strong> Goals For</div>
+            <div class="legend-item"><strong>GA:</strong> Goals Against</div>
+            <div class="legend-item"><strong>GD:</strong> Goal Difference</div>
+            <div class="legend-item">
+              <strong>Pts:</strong> Points (3 for win, 1 for draw)
+            </div>
+            <div class="legend-item"><strong>PPG:</strong> Points Per Game</div>
+            <div class="legend-item"><strong>GPG:</strong> Goals Per Game</div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Empty State -->
-    <div *ngIf="(standings$ | async)?.length === 0" class="empty-state">
-      <div class="empty-icon">🏆</div>
-      <h3>No Standings Available</h3>
-      <p>
-        The tournament standings will appear here once matches have been played.
-      </p>
-      <p class="hint">
-        Players need to be registered and matches need to be completed to
-        generate standings.
-      </p>
+      <!-- Empty State -->
+      <div *ngIf="(standings$ | async)?.length === 0" class="empty-state">
+        <div class="empty-icon">🏆</div>
+        <h3>No Standings Available</h3>
+        <p>
+          The tournament standings will appear here once matches have been
+          played.
+        </p>
+        <p class="hint">
+          Players need to be registered and matches need to be completed to
+          generate standings.
+        </p>
+      </div>
     </div>
-    
   </app-loading-error>
 </div>

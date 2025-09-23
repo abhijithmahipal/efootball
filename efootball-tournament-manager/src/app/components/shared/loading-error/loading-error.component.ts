@@ -24,8 +24,8 @@ import {
     <div *ngIf="loadingState?.isLoading" class="loading-container">
       <div class="loading-spinner"></div>
       <div class="loading-message">
-        <h4>{{ loadingState.operation || 'Loading' }}...</h4>
-        <p *ngIf="loadingState.message">{{ loadingState.message }}</p>
+        <h4>{{ loadingState?.operation || 'Loading' }}...</h4>
+        <p *ngIf="loadingState?.message">{{ loadingState?.message }}</p>
       </div>
     </div>
 
@@ -34,7 +34,7 @@ import {
       <div class="error-icon">⚠️</div>
       <div class="error-content">
         <h4>Something went wrong</h4>
-        <p>{{ errorState.message || 'An unexpected error occurred' }}</p>
+        <p>{{ errorState?.message || 'An unexpected error occurred' }}</p>
         <div class="error-actions">
           <button class="retry-button" (click)="onRetry()">Try Again</button>
           <button class="dismiss-button" (click)="onDismiss()">Dismiss</button>
@@ -49,7 +49,7 @@ import {
         <h4>You're offline</h4>
         <p>Please check your internet connection and try again.</p>
         <button
-          *ngIf="offlineState.canRetry"
+          *ngIf="offlineState?.canRetry"
           class="retry-button"
           (click)="onRetry()"
         >
