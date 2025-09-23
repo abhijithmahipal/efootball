@@ -5,6 +5,7 @@ import { takeUntil, map } from 'rxjs/operators';
 import { MatchService } from '../../services/match.service';
 import { Match } from '../../models/match.model';
 import { PlayoffRound } from '../../models/enums';
+import { LoadingErrorComponent } from '../shared/loading-error/loading-error.component';
 
 interface MatchdayGroup {
   matchday: number;
@@ -20,7 +21,7 @@ interface PlayoffGroup {
 @Component({
   selector: 'app-schedule',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, LoadingErrorComponent],
   templateUrl: './schedule.component.html',
   styleUrls: ['./schedule.component.css'],
 })
@@ -28,11 +29,13 @@ export class ScheduleComponent implements OnInit, OnDestroy {
   leagueMatchdays$: Observable<MatchdayGroup[]>;
   playoffGroups$: Observable<PlayoffGroup[]>;
   isLoading$: Observable<boolean>;
+  error$: Observable<string | null>;
 
   private destroy$ = new Subject<void>();
 
   constructor(private matchService: MatchService) {
     this.isLoading$ = this.matchService.getLoadingState();
+    this.error$ = this.matchService.getErrorState();
 
     // Group league matches by matchday
     this.leagueMatchdays$ = this.matchService.getLeagueMatches().pipe(
@@ -54,6 +57,13 @@ export class ScheduleComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  /**
+   * Handle retry operation
+   */
+  onRetry(): void {
+    this.matchService.retryOperation();
   }
 
   /**

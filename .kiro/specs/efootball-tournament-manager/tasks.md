@@ -156,8 +156,8 @@
   - Write component tests for playoff display functionality
   - _Requirements: 5.5, 4.1, 4.2_
 
-- [ ] 9. Add real-time data synchronization
-- [-] 9.1 Implement Firestore real-time listeners in all services
+- [x] 9. Add real-time data synchronization
+- [x] 9.1 Implement Firestore real-time listeners in all services
 
   - Add real-time subscriptions for players, matches, and standings data
   - Implement proper subscription management to prevent memory leaks
@@ -165,7 +165,7 @@
   - Write integration tests for real-time data synchronization
   - _Requirements: 8.4, 8.5_
 
-- [ ] 9.2 Add loading states and error handling throughout the application
+- [x] 9.2 Add loading states and error handling throughout the application
 
   - Implement loading spinners and progress indicators for all data operations
   - Add error messages and retry mechanisms for failed operations

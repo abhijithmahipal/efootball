@@ -11,16 +11,18 @@ import { takeUntil } from 'rxjs/operators';
 
 import { PlayerService } from '../../services/player.service';
 import { Player } from '../../models/player.model';
+import { LoadingErrorComponent } from '../../components/shared/loading-error/loading-error.component';
 
 @Component({
   selector: 'app-player-management',
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, LoadingErrorComponent],
   templateUrl: './player-management.component.html',
   styleUrl: './player-management.component.css',
 })
 export class PlayerManagementComponent implements OnInit, OnDestroy {
   players$: Observable<Player[]>;
   isLoading$: Observable<boolean>;
+  error$: Observable<string | null>;
   hasMinimumPlayers$: Observable<boolean>;
 
   playerForm!: FormGroup;
@@ -36,6 +38,7 @@ export class PlayerManagementComponent implements OnInit, OnDestroy {
   constructor(private fb: FormBuilder, private playerService: PlayerService) {
     this.players$ = this.playerService.getPlayers();
     this.isLoading$ = this.playerService.getLoadingState();
+    this.error$ = this.playerService.getErrorState();
     this.hasMinimumPlayers$ = this.playerService.hasMinimumPlayers();
   }
 
@@ -46,6 +49,13 @@ export class PlayerManagementComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  /**
+   * Handle retry operation
+   */
+  onRetry(): void {
+    this.playerService.retryOperation();
   }
 
   private initializeForm(): void {

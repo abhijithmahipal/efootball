@@ -6,14 +6,15 @@
     </p>
   </div>
 
-  <!-- Loading State -->
-  <div *ngIf="isLoading$ | async" class="loading-container">
-    <div class="loading-spinner"></div>
-    <p>Loading standings...</p>
-  </div>
-
-  <!-- Content when not loading -->
-  <div *ngIf="!(isLoading$ | async)" class="content">
+  <!-- Loading and Error Handling -->
+  <app-loading-error 
+    [customLoading]="isLoading$" 
+    [customError]="error$"
+    (retry)="onRetry()"
+    loadingMessage="Loading tournament standings...">
+    
+    <!-- Content when loaded successfully -->
+    <div class="content">
     <!-- Standings Table -->
     <div *ngIf="(standings$ | async)?.length! > 0" class="standings-section">
       <!-- Legend -->
@@ -219,5 +220,6 @@
         generate standings.
       </p>
     </div>
-  </div>
+    
+  </app-loading-error>
 </div>

@@ -4,23 +4,26 @@ import { Observable, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { StandingsService } from '../../services/standings.service';
 import { Standing } from '../../models/standing.model';
+import { LoadingErrorComponent } from '../shared/loading-error/loading-error.component';
 
 @Component({
   selector: 'app-standings',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, LoadingErrorComponent],
   templateUrl: './standings.component.html',
   styleUrls: ['./standings.component.css'],
 })
 export class StandingsComponent implements OnInit, OnDestroy {
   standings$: Observable<Standing[]>;
   isLoading$: Observable<boolean>;
+  error$: Observable<string | null>;
 
   private destroy$ = new Subject<void>();
 
   constructor(private standingsService: StandingsService) {
     this.standings$ = this.standingsService.getStandings();
     this.isLoading$ = this.standingsService.getLoadingState();
+    this.error$ = this.standingsService.getErrorState();
   }
 
   ngOnInit(): void {
@@ -30,6 +33,13 @@ export class StandingsComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  /**
+   * Handle retry operation
+   */
+  onRetry(): void {
+    this.standingsService.retryOperation();
   }
 
   /**

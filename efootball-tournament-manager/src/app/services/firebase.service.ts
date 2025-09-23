@@ -35,6 +35,7 @@ import {
   take,
   switchMap,
 } from 'rxjs/operators';
+import { environment } from '../../environments/environment';
 
 export interface FirebaseErrorInfo {
   code: string;
@@ -607,38 +608,6 @@ export class FirebaseService implements OnDestroy {
   }
 
   /**
-   * Enhanced retry operation with exponential backoff
-   */
-  private retryOperation<T>(
-    operation: () => Observable<T>,
-    operationName: string
-  ): Observable<T> {
-    return operation().pipe(
-      retryWhen((errors) =>
-        errors.pipe(
-          tap((error) =>
-            this.logError(
-              `Operation ${operationName} failed, retrying...`,
-              error,
-              operationName
-            )
-          ),
-          delay(this.retryDelay),
-          take(this.maxRetries)
-        )
-      ),
-      catchError((error) => {
-        this.logError(
-          `Operation ${operationName} failed after ${this.maxRetries} retries`,
-          error,
-          operationName
-        );
-        return throwError(() => error);
-      })
-    );
-  }
-
-  /**
    * Logging utility for development and debugging
    */
   private log(message: string): void {
@@ -671,6 +640,3 @@ export class FirebaseService implements OnDestroy {
     return !environment.production;
   }
 }
-
-// Import environment for production check
-import { environment } from '../../environments/environment';
