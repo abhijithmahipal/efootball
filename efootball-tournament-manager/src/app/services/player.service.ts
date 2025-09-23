@@ -1,19 +1,32 @@
-import { Injectable } from '@angular/core';
-import { Observable, BehaviorSubject, throwError, from } from 'rxjs';
-import { map, catchError, tap, switchMap } from 'rxjs/operators';
+import { Injectable, OnDestroy } from '@angular/core';
+import {
+  Observable,
+  BehaviorSubject,
+  throwError,
+  from,
+  Subscription,
+} from 'rxjs';
+import { map, catchError, tap, switchMap, startWith } from 'rxjs/operators';
 import { FirebaseService } from './firebase.service';
 import { Player, validatePlayer } from '../models/player.model';
 
 @Injectable({
   providedIn: 'root',
 })
-export class PlayerService {
+export class PlayerService implements OnDestroy {
   private readonly COLLECTION_NAME = 'players';
   private playersSubject = new BehaviorSubject<Player[]>([]);
   private isLoading = new BehaviorSubject<boolean>(false);
+  private errorSubject = new BehaviorSubject<string | null>(null);
+  private subscriptions: Subscription[] = [];
 
   constructor(private firebaseService: FirebaseService) {
     this.initializePlayersSubscription();
+    this.setupConnectionStatusListener();
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.forEach((sub) => sub.unsubscribe());
   }
 
   /**
@@ -28,6 +41,28 @@ export class PlayerService {
    */
   getLoadingState(): Observable<boolean> {
     return this.isLoading.asObservable();
+  }
+
+  /**
+   * Get error state
+   */
+  getErrorState(): Observable<string | null> {
+    return this.errorSubject.asObservable();
+  }
+
+  /**
+   * Clear error state
+   */
+  clearError(): void {
+    this.errorSubject.next(null);
+  }
+
+  /**
+   * Retry failed operations
+   */
+  retryOperation(): void {
+    this.clearError();
+    this.initializePlayersSubscription();
   }
 
   /**
@@ -247,30 +282,65 @@ export class PlayerService {
   }
 
   /**
-   * Initialize real-time subscription to players collection
+   * Initialize real-time subscription to players collection with enhanced error handling
    */
   private initializePlayersSubscription(): void {
     this.isLoading.next(true);
+    this.clearError();
 
-    this.firebaseService
-      .getCollectionData<Player>(this.COLLECTION_NAME)
-      .subscribe({
-        next: (players) => {
+    const subscription = this.firebaseService
+      .getCollectionData<Player>(this.COLLECTION_NAME, 'players_main')
+      .pipe(
+        startWith([]), // Start with empty array to show loading state
+        map((players) => {
           // Sort players by creation date (newest first)
-          const sortedPlayers = players.sort(
+          return players.sort(
             (a, b) =>
               new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           );
-
-          this.playersSubject.next(sortedPlayers);
+        })
+      )
+      .subscribe({
+        next: (players) => {
+          this.playersSubject.next(players);
           this.isLoading.next(false);
+          this.clearError();
+          console.log(`Players updated: ${players.length} players loaded`);
         },
         error: (error) => {
           console.error('Error in players subscription:', error);
           this.isLoading.next(false);
+          this.errorSubject.next(
+            error.message ||
+              'Failed to load players. Please check your connection and try again.'
+          );
           // Keep existing players in case of temporary connection issues
         },
       });
+
+    this.subscriptions.push(subscription);
+  }
+
+  /**
+   * Setup connection status listener to handle reconnections
+   */
+  private setupConnectionStatusListener(): void {
+    const subscription = this.firebaseService.getConnectionStatus().subscribe({
+      next: (status) => {
+        if (status.isConnected && status.retryAttempts === 0) {
+          // Connection restored, refresh data if we had an error
+          if (this.errorSubject.value) {
+            console.log('Connection restored, refreshing players data');
+            this.initializePlayersSubscription();
+          }
+        }
+      },
+      error: (error) => {
+        console.error('Connection status error:', error);
+      },
+    });
+
+    this.subscriptions.push(subscription);
   }
 
   /**

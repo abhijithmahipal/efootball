@@ -1,215 +1,327 @@
 import { TestBed } from '@angular/core/testing';
-import { FirebaseService, FirebaseErrorInfo } from './firebase.service';
-import { provideFirebaseApp, initializeApp } from '@angular/fire/app';
-import {
-  provideFirestore,
-  getFirestore,
-  connectFirestoreEmulator,
-} from '@angular/fire/firestore';
-import { provideAuth, getAuth, connectAuthEmulator } from '@angular/fire/auth';
-import { of, throwError } from 'rxjs';
+import { Firestore } from '@angular/fire/firestore';
+import { Auth } from '@angular/fire/auth';
+import { FirebaseService, ConnectionStatus } from './firebase.service';
+import { of, throwError, Subject } from 'rxjs';
 
-describe('FirebaseService', () => {
+describe('FirebaseService - Real-time Data Synchronization', () => {
   let service: FirebaseService;
-  let mockFirestore: any;
-  let mockAuth: any;
+  let mockFirestore: jasmine.SpyObj<Firestore>;
+  let mockAuth: jasmine.SpyObj<Auth>;
 
   beforeEach(() => {
-    // Mock Firestore
-    mockFirestore = {
-      collection: jasmine.createSpy('collection'),
-      doc: jasmine.createSpy('doc'),
-    };
-
-    // Mock Auth
-    mockAuth = {
-      authState: of(null),
-    };
+    const firestoreSpy = jasmine.createSpyObj('Firestore', [
+      'collection',
+      'doc',
+    ]);
+    const authSpy = jasmine.createSpyObj('Auth', [
+      'signInWithEmailAndPassword',
+    ]);
 
     TestBed.configureTestingModule({
       providers: [
-        provideFirebaseApp(() =>
-          initializeApp({
-            apiKey: 'test-api-key',
-            authDomain: 'test-project.firebaseapp.com',
-            projectId: 'test-project',
-            storageBucket: 'test-project.appspot.com',
-            messagingSenderId: '123456789',
-            appId: 'test-app-id',
-          })
-        ),
-        provideFirestore(() => getFirestore()),
-        provideAuth(() => getAuth()),
+        FirebaseService,
+        { provide: Firestore, useValue: firestoreSpy },
+        { provide: Auth, useValue: authSpy },
       ],
     });
+
     service = TestBed.inject(FirebaseService);
-  });
-
-  describe('Service Initialization', () => {
-    it('should be created', () => {
-      expect(service).toBeTruthy();
-    });
-
-    it('should initialize connection on creation', () => {
-      expect(service).toBeTruthy();
-      // Connection initialization is called in constructor
-    });
+    mockFirestore = TestBed.inject(Firestore) as jasmine.SpyObj<Firestore>;
+    mockAuth = TestBed.inject(Auth) as jasmine.SpyObj<Auth>;
   });
 
   describe('Connection Management', () => {
-    it('should have testConnection method', () => {
-      expect(service.testConnection).toBeDefined();
+    it('should initialize with disconnected state', () => {
+      service.getConnectionStatus().subscribe((status) => {
+        expect(status.isConnected).toBeFalse();
+        expect(status.retryAttempts).toBe(0);
+      });
     });
 
-    it('should return connection status', () => {
-      expect(typeof service.isFirestoreConnected()).toBe('boolean');
+    it('should update connection status on successful connection', (done) => {
+      spyOn(service, 'testConnection').and.returnValue(of([]));
+
+      service.getConnectionStatus().subscribe((status) => {
+        if (status.isConnected) {
+          expect(status.isConnected).toBeTrue();
+          expect(status.retryAttempts).toBe(0);
+          expect(status.lastConnected).toBeDefined();
+          done();
+        }
+      });
+
+      // Trigger connection initialization
+      (service as any).initializeConnection();
     });
 
-    it('should test connection and return observable', () => {
-      const result = service.testConnection();
-      expect(result).toBeDefined();
-      expect(typeof result.subscribe).toBe('function');
+    it('should handle connection failures with retry logic', (done) => {
+      const error = new Error('Connection failed');
+      spyOn(service, 'testConnection').and.returnValue(throwError(() => error));
+
+      let callCount = 0;
+      service.getConnectionStatus().subscribe((status) => {
+        callCount++;
+        if (callCount === 1) {
+          expect(status.isConnected).toBeFalse();
+          expect(status.retryAttempts).toBe(1);
+          done();
+        }
+      });
+
+      (service as any).initializeConnection();
+    });
+
+    it('should detect network status changes', () => {
+      const onlineEvent = new Event('online');
+      const offlineEvent = new Event('offline');
+
+      // Mock navigator.onLine
+      Object.defineProperty(navigator, 'onLine', {
+        writable: true,
+        value: true,
+      });
+
+      service.getConnectionStatus().subscribe((status) => {
+        expect(status.isOnline).toBeTrue();
+      });
+
+      // Simulate going offline
+      Object.defineProperty(navigator, 'onLine', {
+        writable: true,
+        value: false,
+      });
+
+      window.dispatchEvent(offlineEvent);
+
+      service.getConnectionStatus().subscribe((status) => {
+        expect(status.isOnline).toBeFalse();
+      });
     });
   });
 
-  describe('Authentication', () => {
-    it('should have getAuthState method', () => {
-      expect(service.getAuthState).toBeDefined();
-    });
+  describe('Real-time Collection Data', () => {
+    it('should setup real-time listener with proper subscription management', (done) => {
+      const mockData = [
+        { id: '1', name: 'Test Item 1' },
+        { id: '2', name: 'Test Item 2' },
+      ];
 
-    it('should return auth state observable', () => {
-      const result = service.getAuthState();
-      expect(result).toBeDefined();
-      expect(typeof result.subscribe).toBe('function');
-    });
-  });
+      const mockSnapshot = {
+        docs: mockData.map((item) => ({
+          id: item.id,
+          data: () => ({ name: item.name }),
+        })),
+      };
 
-  describe('Collection Operations', () => {
-    it('should get collection reference', () => {
-      const collectionName = 'test-collection';
-      const result = service.getCollection(collectionName);
-      expect(result).toBeDefined();
-    });
-
-    it('should get collection data', () => {
-      const collectionName = 'test-collection';
-      const result = service.getCollectionData(collectionName);
-      expect(result).toBeDefined();
-      expect(typeof result.subscribe).toBe('function');
-    });
-  });
-
-  describe('Document Operations', () => {
-    const collectionName = 'test-collection';
-    const documentId = 'test-doc';
-    const testData = { name: 'Test', value: 123 };
-
-    it('should get document reference', () => {
-      const result = service.getDocument(collectionName, documentId);
-      expect(result).toBeDefined();
-    });
-
-    it('should get document data', () => {
-      const result = service.getDocumentData(collectionName, documentId);
-      expect(result).toBeDefined();
-      expect(typeof result.subscribe).toBe('function');
-    });
-
-    it('should set document', () => {
-      const result = service.setDocument(collectionName, documentId, testData);
-      expect(result).toBeDefined();
-      expect(typeof result.subscribe).toBe('function');
-    });
-
-    it('should update document', () => {
-      const updateData = { name: 'Updated Test' };
-      const result = service.updateDocument(
-        collectionName,
-        documentId,
-        updateData
+      // Mock onSnapshot
+      const mockUnsubscribe = jasmine.createSpy('unsubscribe');
+      spyOn(service as any, 'onSnapshot').and.callFake(
+        (ref: any, onNext: any, onError: any) => {
+          setTimeout(() => onNext(mockSnapshot), 0);
+          return mockUnsubscribe;
+        }
       );
-      expect(result).toBeDefined();
-      expect(typeof result.subscribe).toBe('function');
+
+      const subscription = service
+        .getCollectionData('test-collection')
+        .subscribe({
+          next: (data) => {
+            expect(data).toEqual(mockData);
+            expect(
+              (service as any).subscriptions.has('collection_test-collection')
+            ).toBeTrue();
+
+            // Test cleanup
+            subscription.unsubscribe();
+            expect(mockUnsubscribe).toHaveBeenCalled();
+            done();
+          },
+        });
     });
 
-    it('should delete document', () => {
-      const result = service.deleteDocument(collectionName, documentId);
-      expect(result).toBeDefined();
-      expect(typeof result.subscribe).toBe('function');
+    it('should handle real-time listener errors with retry logic', (done) => {
+      const error = { code: 'unavailable', message: 'Service unavailable' };
+      let attemptCount = 0;
+
+      spyOn(service as any, 'onSnapshot').and.callFake(
+        (ref: any, onNext: any, onError: any) => {
+          attemptCount++;
+          if (attemptCount === 1) {
+            setTimeout(() => onError(error), 0);
+          } else {
+            // Succeed on retry
+            setTimeout(() => onNext({ docs: [] }), 0);
+          }
+          return jasmine.createSpy('unsubscribe');
+        }
+      );
+
+      service.getCollectionData('test-collection').subscribe({
+        next: (data) => {
+          if (attemptCount > 1) {
+            expect(data).toEqual([]);
+            done();
+          }
+        },
+        error: (err) => {
+          // Should not reach here due to retry logic
+          fail('Should have retried the operation');
+        },
+      });
+    });
+
+    it('should prevent memory leaks by cleaning up subscriptions', () => {
+      const mockUnsubscribe = jasmine.createSpy('unsubscribe');
+      spyOn(service as any, 'onSnapshot').and.returnValue(mockUnsubscribe);
+
+      const subscription1 = service
+        .getCollectionData('test-collection', 'key1')
+        .subscribe();
+      const subscription2 = service
+        .getCollectionData('test-collection', 'key1')
+        .subscribe(); // Same key
+
+      expect((service as any).subscriptions.size).toBe(1); // Should replace previous subscription
+      expect(mockUnsubscribe).toHaveBeenCalledTimes(1); // Previous subscription cleaned up
+
+      subscription2.unsubscribe();
+      expect(mockUnsubscribe).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('Real-time Document Data', () => {
+    it('should setup real-time document listener', (done) => {
+      const mockData = { id: 'doc1', name: 'Test Document' };
+      const mockDocSnapshot = {
+        exists: () => true,
+        id: mockData.id,
+        data: () => ({ name: mockData.name }),
+      };
+
+      spyOn(service as any, 'onSnapshot').and.callFake(
+        (ref: any, onNext: any) => {
+          setTimeout(() => onNext(mockDocSnapshot), 0);
+          return jasmine.createSpy('unsubscribe');
+        }
+      );
+
+      service.getDocumentDataRealtime('test-collection', 'doc1').subscribe({
+        next: (data) => {
+          expect(data).toEqual(mockData);
+          done();
+        },
+      });
+    });
+
+    it('should handle non-existent documents', (done) => {
+      const mockDocSnapshot = {
+        exists: () => false,
+      };
+
+      spyOn(service as any, 'onSnapshot').and.callFake(
+        (ref: any, onNext: any) => {
+          setTimeout(() => onNext(mockDocSnapshot), 0);
+          return jasmine.createSpy('unsubscribe');
+        }
+      );
+
+      service
+        .getDocumentDataRealtime('test-collection', 'non-existent')
+        .subscribe({
+          next: (data) => {
+            expect(data).toBeNull();
+            done();
+          },
+        });
     });
   });
 
   describe('Error Handling', () => {
-    it('should handle Firestore errors properly', (done) => {
-      // Create a proper FirebaseErrorInfo object
-      const mockError: FirebaseErrorInfo = {
+    it('should determine retryable errors correctly', () => {
+      const retryableErrors = [
+        { code: 'unavailable' },
+        { code: 'deadline-exceeded' },
+        { code: 'resource-exhausted' },
+        { code: 'internal' },
+        { code: 'unknown' },
+      ];
+
+      const nonRetryableErrors = [
+        { code: 'permission-denied' },
+        { code: 'not-found' },
+        { code: 'already-exists' },
+        { code: 'invalid-argument' },
+      ];
+
+      retryableErrors.forEach((error) => {
+        expect((service as any).shouldRetryError(error)).toBeTrue();
+      });
+
+      nonRetryableErrors.forEach((error) => {
+        expect((service as any).shouldRetryError(error)).toBeFalse();
+      });
+    });
+
+    it('should create proper error info objects', () => {
+      const originalError = {
         code: 'unavailable',
-        message: 'Firestore unavailable',
-        operation: 'testConnection',
-        timestamp: new Date(),
+        message: 'Service is unavailable',
       };
 
-      // Mock a failing operation by spying on testConnection
-      spyOn(service, 'testConnection').and.returnValue(
-        throwError(() => mockError)
+      const errorInfo = (service as any).createFirebaseError(
+        originalError,
+        'testOperation'
       );
 
-      service.testConnection().subscribe({
+      expect(errorInfo.code).toBe('unavailable');
+      expect(errorInfo.message).toBe('Service is unavailable');
+      expect(errorInfo.operation).toBe('testOperation');
+      expect(errorInfo.timestamp).toBeInstanceOf(Date);
+    });
+  });
+
+  describe('Force Reconnection', () => {
+    it('should force reconnection and update status', (done) => {
+      spyOn(service, 'testConnection').and.returnValue(of([]));
+
+      service.forceReconnect().subscribe({
         next: () => {
-          fail('Should have thrown an error');
-        },
-        error: (error: FirebaseErrorInfo) => {
-          expect(error.code).toBe('unavailable');
-          expect(error.message).toBe('Firestore unavailable');
-          expect(error.operation).toBe('testConnection');
-          expect(error.timestamp).toBeInstanceOf(Date);
-          done();
+          service.getConnectionStatus().subscribe((status) => {
+            expect(status.isConnected).toBeTrue();
+            expect(status.retryAttempts).toBe(0);
+            done();
+          });
         },
       });
     });
 
-    it('should mark connection as disconnected on unavailable error', (done) => {
-      const mockError: FirebaseErrorInfo = {
-        code: 'unavailable',
-        message: 'Firestore unavailable',
-        operation: 'testConnection',
-        timestamp: new Date(),
-      };
+    it('should handle force reconnection failures', (done) => {
+      const error = new Error('Reconnection failed');
+      spyOn(service, 'testConnection').and.returnValue(throwError(() => error));
 
-      spyOn(service, 'testConnection').and.returnValue(
-        throwError(() => mockError)
-      );
-
-      service.testConnection().subscribe({
-        error: () => {
-          // Connection status should be updated
-          expect(service.isFirestoreConnected()).toBe(false);
+      service.forceReconnect().subscribe({
+        error: (err) => {
+          expect(err).toBe(error);
           done();
         },
       });
     });
   });
 
-  describe('Logging and Debugging', () => {
-    it('should have logging methods (private methods tested indirectly)', () => {
-      // Test that operations don't throw errors (logging is called internally)
-      expect(() => service.getCollection('test')).not.toThrow();
-      expect(() => service.getDocument('test', 'doc')).not.toThrow();
-    });
-  });
+  describe('Cleanup', () => {
+    it('should cleanup all subscriptions on destroy', () => {
+      const mockUnsubscribe1 = jasmine.createSpy('unsubscribe1');
+      const mockUnsubscribe2 = jasmine.createSpy('unsubscribe2');
 
-  describe('Utility Methods', () => {
-    it('should provide collection and document reference methods', () => {
-      expect(service.getCollection).toBeDefined();
-      expect(service.getDocument).toBeDefined();
-    });
+      (service as any).subscriptions.set('key1', mockUnsubscribe1);
+      (service as any).subscriptions.set('key2', mockUnsubscribe2);
 
-    it('should provide CRUD operation methods', () => {
-      expect(service.getDocumentData).toBeDefined();
-      expect(service.setDocument).toBeDefined();
-      expect(service.updateDocument).toBeDefined();
-      expect(service.deleteDocument).toBeDefined();
-      expect(service.getCollectionData).toBeDefined();
+      service.ngOnDestroy();
+
+      expect(mockUnsubscribe1).toHaveBeenCalled();
+      expect(mockUnsubscribe2).toHaveBeenCalled();
+      expect((service as any).subscriptions.size).toBe(0);
     });
   });
 });

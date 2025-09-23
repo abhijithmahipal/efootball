@@ -1,12 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import { PlayerService } from './player.service';
-import { FirebaseService } from './firebase.service';
+import { FirebaseService, ConnectionStatus } from './firebase.service';
 import { Player } from '../models/player.model';
-import { of, throwError, BehaviorSubject } from 'rxjs';
+import { of, throwError, BehaviorSubject, Subject } from 'rxjs';
 
 describe('PlayerService', () => {
   let service: PlayerService;
   let mockFirebaseService: jasmine.SpyObj<FirebaseService>;
+  let connectionStatusSubject: BehaviorSubject<ConnectionStatus>;
 
   const mockPlayers: Player[] = [
     {
@@ -30,16 +31,26 @@ describe('PlayerService', () => {
   ];
 
   beforeEach(() => {
+    connectionStatusSubject = new BehaviorSubject<ConnectionStatus>({
+      isConnected: true,
+      isOnline: true,
+      retryAttempts: 0,
+    });
+
     const firebaseServiceSpy = jasmine.createSpyObj('FirebaseService', [
       'getCollectionData',
       'getDocumentData',
       'setDocument',
       'updateDocument',
       'deleteDocument',
+      'getConnectionStatus',
     ]);
 
     // Setup default mock behavior before TestBed configuration
     firebaseServiceSpy.getCollectionData.and.returnValue(of(mockPlayers));
+    firebaseServiceSpy.getConnectionStatus.and.returnValue(
+      connectionStatusSubject.asObservable()
+    );
 
     TestBed.configureTestingModule({
       providers: [
@@ -392,6 +403,105 @@ describe('PlayerService', () => {
     });
   });
 
+  describe('Real-time Data Synchronization', () => {
+    it('should setup real-time subscription with proper key', () => {
+      expect(mockFirebaseService.getCollectionData).toHaveBeenCalledWith(
+        'players',
+        'players_main'
+      );
+    });
+
+    it('should handle real-time data updates', (done) => {
+      const updatedPlayers = [
+        ...mockPlayers,
+        {
+          id: 'player4',
+          name: 'New Player',
+          isActive: true,
+          createdAt: new Date(),
+        },
+      ];
+
+      const dataSubject = new Subject<Player[]>();
+      mockFirebaseService.getCollectionData.and.returnValue(
+        dataSubject.asObservable()
+      );
+
+      const newService = new PlayerService(mockFirebaseService);
+
+      newService.getPlayers().subscribe((players) => {
+        if (players.length === 4) {
+          expect(players).toEqual(updatedPlayers);
+          done();
+        }
+      });
+
+      // Simulate real-time update
+      dataSubject.next(updatedPlayers);
+    });
+
+    it('should handle connection status changes', (done) => {
+      let errorCallCount = 0;
+      const errorSubject = new Subject<any>();
+
+      mockFirebaseService.getCollectionData.and.returnValue(
+        errorSubject.asObservable()
+      );
+
+      const newService = new PlayerService(mockFirebaseService);
+
+      newService.getErrorState().subscribe((error) => {
+        if (error) {
+          errorCallCount++;
+          expect(error).toContain('Failed to load players');
+
+          // Simulate connection restoration
+          connectionStatusSubject.next({
+            isConnected: true,
+            isOnline: true,
+            retryAttempts: 0,
+          });
+
+          if (errorCallCount === 1) {
+            done();
+          }
+        }
+      });
+
+      // Simulate connection error
+      errorSubject.error(new Error('Connection lost'));
+    });
+
+    it('should provide error state management', (done) => {
+      service.getErrorState().subscribe((error) => {
+        expect(error).toBeNull(); // Initially no error
+        done();
+      });
+    });
+
+    it('should allow error clearing', () => {
+      service.clearError();
+      service.getErrorState().subscribe((error) => {
+        expect(error).toBeNull();
+      });
+    });
+
+    it('should allow retry operations', () => {
+      spyOn(service as any, 'initializePlayersSubscription');
+      service.retryOperation();
+      expect((service as any).initializePlayersSubscription).toHaveBeenCalled();
+    });
+
+    it('should cleanup subscriptions on destroy', () => {
+      const subscriptions = (service as any).subscriptions;
+      spyOn(subscriptions[0], 'unsubscribe').and.callThrough();
+
+      service.ngOnDestroy();
+
+      expect(subscriptions[0].unsubscribe).toHaveBeenCalled();
+    });
+  });
+
   describe('Error Handling', () => {
     it('should handle Firebase errors gracefully', (done) => {
       const errorMessage = 'Firebase connection error';
@@ -415,6 +525,24 @@ describe('PlayerService', () => {
 
       // Should not throw during service creation
       expect(() => new PlayerService(mockFirebaseService)).not.toThrow();
+    });
+
+    it('should set error state on subscription failures', (done) => {
+      const errorSubject = new Subject<Player[]>();
+      mockFirebaseService.getCollectionData.and.returnValue(
+        errorSubject.asObservable()
+      );
+
+      const newService = new PlayerService(mockFirebaseService);
+
+      newService.getErrorState().subscribe((error) => {
+        if (error) {
+          expect(error).toContain('Failed to load players');
+          done();
+        }
+      });
+
+      errorSubject.error(new Error('Subscription failed'));
     });
   });
 });

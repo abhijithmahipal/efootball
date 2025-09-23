@@ -1,12 +1,13 @@
-import { Injectable } from '@angular/core';
+import { Injectable, OnDestroy } from '@angular/core';
 import {
   Observable,
   BehaviorSubject,
   throwError,
   from,
   combineLatest,
+  Subscription,
 } from 'rxjs';
-import { map, catchError, tap, switchMap } from 'rxjs/operators';
+import { map, catchError, tap, switchMap, startWith } from 'rxjs/operators';
 import { FirebaseService } from './firebase.service';
 import { PlayerService } from './player.service';
 import { Match, validateMatch } from '../models/match.model';
@@ -28,16 +29,23 @@ export interface PlayoffBracket {
 @Injectable({
   providedIn: 'root',
 })
-export class MatchService {
+export class MatchService implements OnDestroy {
   private readonly COLLECTION_NAME = 'matches';
   private matchesSubject = new BehaviorSubject<Match[]>([]);
   private isLoading = new BehaviorSubject<boolean>(false);
+  private errorSubject = new BehaviorSubject<string | null>(null);
+  private subscriptions: Subscription[] = [];
 
   constructor(
     private firebaseService: FirebaseService,
     private playerService: PlayerService
   ) {
     this.initializeMatchesSubscription();
+    this.setupConnectionStatusListener();
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.forEach((sub) => sub.unsubscribe());
   }
 
   /**
@@ -52,6 +60,28 @@ export class MatchService {
    */
   getLoadingState(): Observable<boolean> {
     return this.isLoading.asObservable();
+  }
+
+  /**
+   * Get error state
+   */
+  getErrorState(): Observable<string | null> {
+    return this.errorSubject.asObservable();
+  }
+
+  /**
+   * Clear error state
+   */
+  clearError(): void {
+    this.errorSubject.next(null);
+  }
+
+  /**
+   * Retry failed operations
+   */
+  retryOperation(): void {
+    this.clearError();
+    this.initializeMatchesSubscription();
   }
 
   /**
@@ -457,17 +487,19 @@ export class MatchService {
   }
 
   /**
-   * Initialize real-time subscription to matches collection
+   * Initialize real-time subscription to matches collection with enhanced error handling
    */
   private initializeMatchesSubscription(): void {
     this.isLoading.next(true);
+    this.clearError();
 
-    this.firebaseService
-      .getCollectionData<Match>(this.COLLECTION_NAME)
-      .subscribe({
-        next: (matches) => {
+    const subscription = this.firebaseService
+      .getCollectionData<Match>(this.COLLECTION_NAME, 'matches_main')
+      .pipe(
+        startWith([]), // Start with empty array to show loading state
+        map((matches) => {
           // Sort matches by matchday, then by creation date
-          const sortedMatches = matches.sort((a, b) => {
+          return matches.sort((a, b) => {
             if (a.matchday !== b.matchday) {
               return a.matchday - b.matchday;
             }
@@ -475,16 +507,49 @@ export class MatchService {
               new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
             );
           });
-
-          this.matchesSubject.next(sortedMatches);
+        })
+      )
+      .subscribe({
+        next: (matches) => {
+          this.matchesSubject.next(matches);
           this.isLoading.next(false);
+          this.clearError();
+          console.log(`Matches updated: ${matches.length} matches loaded`);
         },
         error: (error) => {
           console.error('Error in matches subscription:', error);
           this.isLoading.next(false);
+          this.errorSubject.next(
+            error.message ||
+              'Failed to load matches. Please check your connection and try again.'
+          );
           // Keep existing matches in case of temporary connection issues
         },
       });
+
+    this.subscriptions.push(subscription);
+  }
+
+  /**
+   * Setup connection status listener to handle reconnections
+   */
+  private setupConnectionStatusListener(): void {
+    const subscription = this.firebaseService.getConnectionStatus().subscribe({
+      next: (status) => {
+        if (status.isConnected && status.retryAttempts === 0) {
+          // Connection restored, refresh data if we had an error
+          if (this.errorSubject.value) {
+            console.log('Connection restored, refreshing matches data');
+            this.initializeMatchesSubscription();
+          }
+        }
+      },
+      error: (error) => {
+        console.error('Connection status error:', error);
+      },
+    });
+
+    this.subscriptions.push(subscription);
   }
 
   /**

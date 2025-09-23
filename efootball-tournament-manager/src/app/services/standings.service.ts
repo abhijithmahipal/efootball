@@ -1,6 +1,6 @@
-import { Injectable } from '@angular/core';
-import { Observable, BehaviorSubject, combineLatest } from 'rxjs';
-import { map, tap } from 'rxjs/operators';
+import { Injectable, OnDestroy } from '@angular/core';
+import { Observable, BehaviorSubject, combineLatest, Subscription } from 'rxjs';
+import { map, tap, catchError, startWith } from 'rxjs/operators';
 import { PlayerService } from './player.service';
 import { MatchService } from './match.service';
 import { Standing } from '../models/standing.model';
@@ -10,15 +10,21 @@ import { Match } from '../models/match.model';
 @Injectable({
   providedIn: 'root',
 })
-export class StandingsService {
+export class StandingsService implements OnDestroy {
   private standingsSubject = new BehaviorSubject<Standing[]>([]);
   private isLoading = new BehaviorSubject<boolean>(false);
+  private errorSubject = new BehaviorSubject<string | null>(null);
+  private subscriptions: Subscription[] = [];
 
   constructor(
     private playerService: PlayerService,
     private matchService: MatchService
   ) {
     this.initializeStandingsCalculation();
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.forEach((sub) => sub.unsubscribe());
   }
 
   /**
@@ -33,6 +39,28 @@ export class StandingsService {
    */
   getLoadingState(): Observable<boolean> {
     return this.isLoading.asObservable();
+  }
+
+  /**
+   * Get error state
+   */
+  getErrorState(): Observable<string | null> {
+    return this.errorSubject.asObservable();
+  }
+
+  /**
+   * Clear error state
+   */
+  clearError(): void {
+    this.errorSubject.next(null);
+  }
+
+  /**
+   * Retry failed operations
+   */
+  retryOperation(): void {
+    this.clearError();
+    this.initializeStandingsCalculation();
   }
 
   /**
@@ -113,15 +141,16 @@ export class StandingsService {
   }
 
   /**
-   * Initialize real-time standings calculation
+   * Initialize real-time standings calculation with enhanced error handling
    */
   private initializeStandingsCalculation(): void {
     this.isLoading.next(true);
+    this.clearError();
 
     // Combine players and matches to calculate standings in real-time
-    combineLatest([
-      this.playerService.getActivePlayers(),
-      this.matchService.getLeagueMatches(),
+    const subscription = combineLatest([
+      this.playerService.getActivePlayers().pipe(startWith([])),
+      this.matchService.getLeagueMatches().pipe(startWith([])),
     ])
       .pipe(
         map(([players, matches]) => {
@@ -129,7 +158,20 @@ export class StandingsService {
           const playedMatches = matches.filter((match) => match.isPlayed);
           return this.calculateStandings(players, playedMatches);
         }),
-        tap(() => this.isLoading.next(false))
+        tap(() => {
+          this.isLoading.next(false);
+          this.clearError();
+        }),
+        catchError((error) => {
+          console.error('Error calculating standings:', error);
+          this.isLoading.next(false);
+          this.errorSubject.next(
+            error.message ||
+              'Failed to calculate standings. Please check your connection and try again.'
+          );
+          // Return empty standings to prevent stream from breaking
+          return [[]];
+        })
       )
       .subscribe({
         next: (standings) => {
@@ -137,10 +179,15 @@ export class StandingsService {
           console.log('Standings updated:', standings.length, 'players');
         },
         error: (error) => {
-          console.error('Error calculating standings:', error);
+          console.error('Error in standings subscription:', error);
           this.isLoading.next(false);
+          this.errorSubject.next(
+            'Failed to update standings. Please refresh the page.'
+          );
         },
       });
+
+    this.subscriptions.push(subscription);
   }
 
   /**
