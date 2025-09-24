@@ -1,12 +1,12 @@
 .home-container {
-  min-height: calc(100vh - 80px);
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
 /* Hero Section */
 .hero-section {
-  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+  background: #1976d2;
   color: white;
   padding: 3rem 1rem;
   text-align: center;
