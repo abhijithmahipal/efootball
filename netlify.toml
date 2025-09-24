@@ -1,7 +1,7 @@
 [build]
   base = "efootball-tournament-manager"
   command = "npm run build"
-  publish = "efootball-tournament-manager/dist/efootball-tournament-manager/browser"
+  publish = "dist/efootball-tournament-manager/browser"
 
 [build.environment]
   NODE_VERSION = "22"
