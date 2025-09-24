@@ -401,30 +401,66 @@ export class MatchService implements OnDestroy {
   }
 
   /**
-   * Create round-robin matches for given players
+   * Create round-robin matches for given players using proper round-robin algorithm
+   *
+   * This algorithm ensures:
+   * - Each player plays exactly once per matchday
+   * - Complete double round-robin (each player plays every other player twice - home and away)
+   * - Optimal scheduling with minimum number of matchdays
+   *
+   * Algorithm explanation:
+   * 1. If odd number of players, add a "bye" player
+   * 2. Fix one player in position, rotate others around
+   * 3. Each round generates n/2 matches where each player plays exactly once
+   * 4. Generate both home and away fixtures for complete double round-robin
    */
   private createRoundRobinMatches(players: Player[]): Match[] {
     const matches: Match[] = [];
-    let matchday = 1;
-    let matchesInCurrentDay = 0;
-    const maxMatchesPerDay = Math.floor(players.length / 2);
+    const n = players.length;
 
-    // Generate home and away matches for each pair
-    for (let i = 0; i < players.length; i++) {
-      for (let j = i + 1; j < players.length; j++) {
-        // Home match: player i vs player j
-        matches.push(this.createLeagueMatch(players[i], players[j], matchday));
+    // If odd number of players, add a "bye" placeholder
+    const playersWithBye = [...players];
+    if (n % 2 === 1) {
+      playersWithBye.push({
+        id: 'bye',
+        name: 'BYE',
+        isActive: true,
+        createdAt: new Date(),
+      });
+    }
 
-        // Away match: player j vs player i
-        matches.push(this.createLeagueMatch(players[j], players[i], matchday));
+    const totalPlayers = playersWithBye.length;
+    const totalRounds = totalPlayers - 1;
 
-        matchesInCurrentDay += 2;
+    // Generate matches for each round (matchday)
+    for (let round = 0; round < totalRounds; round++) {
+      const matchday = round + 1;
+      const roundMatches: Match[] = [];
 
-        // Move to next matchday if current day is full
-        if (matchesInCurrentDay >= maxMatchesPerDay * 2) {
-          matchday++;
-          matchesInCurrentDay = 0;
+      // Create matches for this round
+      for (let i = 0; i < totalPlayers / 2; i++) {
+        const player1Index = i;
+        const player2Index = totalPlayers - 1 - i;
+
+        const player1 = playersWithBye[player1Index];
+        const player2 = playersWithBye[player2Index];
+
+        // Skip matches involving the "bye" player
+        if (player1.id !== 'bye' && player2.id !== 'bye') {
+          // Create both home and away matches for complete double round-robin
+          roundMatches.push(this.createLeagueMatch(player1, player2, matchday));
+          roundMatches.push(
+            this.createLeagueMatch(player2, player1, matchday + totalRounds)
+          );
         }
+      }
+
+      matches.push(...roundMatches);
+
+      // Rotate players (except the first one which stays fixed)
+      if (totalPlayers > 2) {
+        const lastPlayer = playersWithBye.pop()!;
+        playersWithBye.splice(1, 0, lastPlayer);
       }
     }
 
@@ -481,9 +517,13 @@ export class MatchService implements OnDestroy {
    * Calculate total matchdays needed for round-robin tournament
    */
   private calculateTotalMatchdays(playerCount: number): number {
-    const totalMatches = playerCount * (playerCount - 1); // Each player plays every other player twice
-    const maxMatchesPerDay = Math.floor(playerCount / 2) * 2; // Maximum concurrent matches per day
-    return Math.ceil(totalMatches / maxMatchesPerDay);
+    // For a double round-robin tournament:
+    // - Each player plays every other player twice (home and away)
+    // - With proper scheduling, we need 2 * (n-1) matchdays for n players
+    // - If odd number of players, one player gets a "bye" each round
+    const adjustedPlayerCount =
+      playerCount % 2 === 0 ? playerCount : playerCount + 1;
+    return 2 * (adjustedPlayerCount - 1);
   }
 
   /**
