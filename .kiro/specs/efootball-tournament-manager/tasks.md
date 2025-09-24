@@ -181,8 +181,8 @@
   - Test security rules with Firebase Emulator Suite
   - _Requirements: 7.3, 8.2_
 
-- [ ] 11. Add comprehensive testing suite
-- [ ] 11.1 Write integration tests for service interactions
+- [x] 11. Add comprehensive testing suite in playwright
+- [x] 11.1 Write integration tests for service interactions
 
   - Create integration tests for PlayerService and MatchService coordination
   - Test StandingsService integration with match result updates
@@ -190,7 +190,7 @@
   - Write tests for Firebase service integration and error scenarios
   - _Requirements: All requirements validation_
 
-- [ ] 11.2 Write end-to-end tests for complete user workflows
+- [x] 11.2 Write end-to-end tests for complete user workflows
 
   - Create E2E tests for complete tournament creation and management workflow
   - Test public user journey from viewing schedules to checking standings

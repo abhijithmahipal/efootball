@@ -1,8 +1,10 @@
-<div class="home-container">
+<div class="home-container" data-testid="main-content">
   <div class="hero-section">
     <div class="hero-content">
-      <h1 class="hero-title">Welcome to eFootball Tournament Manager</h1>
-      <p class="hero-subtitle">
+      <h1 class="hero-title" data-testid="app-title">
+        Welcome to eFootball Tournament Manager
+      </h1>
+      <p class="hero-subtitle" data-testid="welcome-message">
         Organize and manage your eFootball tournaments with ease. Create
         round-robin leagues, track match results, and follow the standings in
         real-time.
@@ -13,6 +15,7 @@
           class="btn btn-primary"
           routerLink="/schedule"
           [attr.aria-label]="'View tournament schedule'"
+          data-testid="view-schedule-link"
         >
           <svg
             class="btn-icon"
@@ -34,6 +37,7 @@
           class="btn btn-secondary"
           routerLink="/standings"
           [attr.aria-label]="'View tournament standings'"
+          data-testid="view-standings-link"
         >
           <svg
             class="btn-icon"
@@ -146,6 +150,7 @@
         class="btn btn-admin"
         routerLink="/admin"
         [attr.aria-label]="'Access admin panel'"
+        data-testid="admin-link"
       >
         <svg
           class="btn-icon"

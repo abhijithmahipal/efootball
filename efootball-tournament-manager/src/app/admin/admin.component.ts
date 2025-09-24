@@ -13,31 +13,42 @@ import { AuthService } from '../services/auth.service';
   standalone: true,
   imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive],
   template: `
-    <div class="admin-layout">
+    <div class="admin-layout" data-testid="admin-dashboard">
       <header class="admin-header">
         <div class="admin-header-content">
-          <h1>eFootball Tournament Manager - Admin</h1>
+          <h1 data-testid="admin-welcome">
+            eFootball Tournament Manager - Admin
+          </h1>
           <nav class="admin-nav">
             <a routerLink="/home" class="nav-link">← Back to Site</a>
             <a
               routerLink="/admin/players"
               class="nav-link"
               routerLinkActive="active"
+              data-testid="manage-players-link"
               >Players</a
             >
             <a
               routerLink="/admin/schedule-generator"
               class="nav-link"
               routerLinkActive="active"
+              data-testid="generate-schedule-link"
               >Schedule</a
             >
             <a
               routerLink="/admin/match-results"
               class="nav-link"
               routerLinkActive="active"
+              data-testid="enter-results-link"
               >Match Results</a
             >
-            <button (click)="logout()" class="logout-btn">Logout</button>
+            <button
+              (click)="logout()"
+              class="logout-btn"
+              data-testid="logout-button"
+            >
+              Logout
+            </button>
           </nav>
         </div>
       </header>

@@ -1,4 +1,4 @@
-<header class="header">
+<header class="header" data-testid="app-header">
   <div class="header-container">
     <div class="logo">
       <a routerLink="/home" class="logo-link">
@@ -6,25 +6,41 @@
       </a>
     </div>
 
-    <nav class="nav">
+    <nav class="nav" data-testid="nav-menu">
       <ul class="nav-list">
         <li class="nav-item">
-          <a routerLink="/home" routerLinkActive="active" class="nav-link"
+          <a
+            routerLink="/home"
+            routerLinkActive="active"
+            class="nav-link"
+            data-testid="home-nav-link"
             >Home</a
           >
         </li>
         <li class="nav-item">
-          <a routerLink="/schedule" routerLinkActive="active" class="nav-link"
+          <a
+            routerLink="/schedule"
+            routerLinkActive="active"
+            class="nav-link"
+            data-testid="schedule-nav-link"
             >Schedule</a
           >
         </li>
         <li class="nav-item">
-          <a routerLink="/standings" routerLinkActive="active" class="nav-link"
+          <a
+            routerLink="/standings"
+            routerLinkActive="active"
+            class="nav-link"
+            data-testid="standings-nav-link"
             >Standings</a
           >
         </li>
         <li class="nav-item admin-link">
-          <a routerLink="/admin" routerLinkActive="active" class="nav-link"
+          <a
+            routerLink="/admin"
+            routerLinkActive="active"
+            class="nav-link"
+            data-testid="admin-nav-link"
             >Admin</a
           >
         </li>
@@ -44,6 +60,7 @@
       class="mobile-menu-btn"
       (click)="toggleMobileMenu()"
       [attr.aria-expanded]="isMobileMenuOpen"
+      data-testid="mobile-nav-toggle"
     >
       <span class="sr-only">Open main menu</span>
       <svg

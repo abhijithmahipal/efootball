@@ -1,6 +1,6 @@
 <div class="player-management-container">
   <div class="header">
-    <h1>Player Management</h1>
+    <h1 data-testid="player-management-title">Player Management</h1>
     <p class="subtitle">Manage tournament players and roster</p>
   </div>
 
@@ -11,7 +11,9 @@
       <div class="stat-label">Active Players</div>
     </div>
     <div class="stat-card">
-      <div class="stat-number">{{ players.length }}</div>
+      <div class="stat-number" data-testid="player-count">
+        {{ players.length }} players
+      </div>
       <div class="stat-label">Total Players</div>
     </div>
     <div class="stat-card" [class.warning]="!(hasMinimumPlayers$ | async)">
@@ -36,7 +38,12 @@
       </button>
     </div>
 
-    <form [formGroup]="playerForm" (ngSubmit)="onSubmit()" class="player-form">
+    <form
+      [formGroup]="playerForm"
+      (ngSubmit)="onSubmit()"
+      class="player-form"
+      data-testid="add-player-form"
+    >
       <div class="form-group">
         <label for="playerName">Player Name</label>
         <input
@@ -47,6 +54,7 @@
           [class.invalid]="isFieldInvalid('name')"
           placeholder="Enter player name"
           autocomplete="off"
+          data-testid="player-name-input"
         />
         <div class="error-message" *ngIf="isFieldInvalid('name')">
           {{ getFieldError("name") }}
@@ -54,7 +62,11 @@
       </div>
 
       <!-- Error Message -->
-      <div class="alert alert-error" *ngIf="errorMessage">
+      <div
+        class="alert alert-error"
+        *ngIf="errorMessage"
+        data-testid="error-message"
+      >
         {{ errorMessage }}
       </div>
 
@@ -68,6 +80,7 @@
         type="submit"
         class="btn btn-primary"
         [disabled]="isSubmitting || playerForm.invalid"
+        data-testid="add-player-button"
       >
         <span *ngIf="isSubmitting" class="loading-spinner"></span>
         {{
@@ -98,6 +111,7 @@
               *ngFor="let player of players; trackBy: trackByPlayerId"
               class="player-card"
               [class.inactive]="!isPlayerActive(player)"
+              data-testid="player-item"
             >
               <div class="player-info">
                 <div class="player-name">{{ player.name }}</div>
@@ -120,6 +134,7 @@
                   class="btn btn-small btn-secondary"
                   (click)="editPlayer(player)"
                   [disabled]="isSubmitting"
+                  data-testid="edit-button"
                 >
                   Edit
                 </button>
@@ -128,6 +143,7 @@
                   class="btn btn-small btn-danger"
                   (click)="confirmDelete(player)"
                   [disabled]="isSubmitting"
+                  data-testid="delete-button"
                 >
                   Delete
                 </button>
@@ -187,6 +203,7 @@
         class="btn btn-danger"
         (click)="deletePlayer()"
         [disabled]="isSubmitting"
+        data-testid="confirm-delete-button"
       >
         <span *ngIf="isSubmitting" class="loading-spinner"></span>
         {{ isSubmitting ? "Deleting..." : "Delete Player" }}
