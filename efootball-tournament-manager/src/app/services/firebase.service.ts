@@ -15,6 +15,7 @@ import {
   DocumentData,
   enableNetwork,
   disableNetwork,
+  Timestamp,
 } from '@angular/fire/firestore';
 import { Auth, authState, User } from '@angular/fire/auth';
 import {
@@ -266,7 +267,10 @@ export class FirebaseService implements OnDestroy {
     return from(getDoc(docRef)).pipe(
       map((docSnap) => {
         if (docSnap.exists()) {
-          const data = { id: docSnap.id, ...docSnap.data() } as T;
+          const data = {
+            id: docSnap.id,
+            ...this.convertTimestamps(docSnap.data()),
+          } as T;
           this.log(
             `Document fetched successfully: ${collectionName}/${documentId}`
           );
@@ -374,7 +378,7 @@ export class FirebaseService implements OnDestroy {
 
             const data = snapshot.docs.map((doc) => ({
               id: doc.id,
-              ...doc.data(),
+              ...this.convertTimestamps(doc.data()),
             })) as T[];
 
             this.log(
@@ -485,7 +489,10 @@ export class FirebaseService implements OnDestroy {
             if (!isSubscribed) return;
 
             if (docSnap.exists()) {
-              const data = { id: docSnap.id, ...docSnap.data() } as T;
+              const data = {
+                id: docSnap.id,
+                ...this.convertTimestamps(docSnap.data()),
+              } as T;
               this.log(
                 `Document data received: ${collectionName}/${documentId}`
               );
@@ -605,6 +612,52 @@ export class FirebaseService implements OnDestroy {
     }
 
     return throwError(() => errorInfo);
+  }
+
+  /**
+   * Convert Firestore Timestamps to JavaScript Dates
+   */
+  private convertTimestamps(data: any): any {
+    if (!data || typeof data !== 'object') {
+      return data;
+    }
+
+    const converted = { ...data };
+
+    for (const key in converted) {
+      if (converted.hasOwnProperty(key)) {
+        const value = converted[key];
+
+        // Check if it's a Firestore Timestamp
+        if (
+          value &&
+          typeof value === 'object' &&
+          value.toDate &&
+          typeof value.toDate === 'function'
+        ) {
+          converted[key] = value.toDate();
+        } else if (
+          value &&
+          typeof value === 'object' &&
+          value.seconds !== undefined &&
+          value.nanoseconds !== undefined
+        ) {
+          // Handle Timestamp-like objects
+          converted[key] = new Timestamp(
+            value.seconds,
+            value.nanoseconds
+          ).toDate();
+        } else if (Array.isArray(value)) {
+          // Recursively convert arrays
+          converted[key] = value.map((item) => this.convertTimestamps(item));
+        } else if (value && typeof value === 'object') {
+          // Recursively convert nested objects
+          converted[key] = this.convertTimestamps(value);
+        }
+      }
+    }
+
+    return converted;
   }
 
   /**

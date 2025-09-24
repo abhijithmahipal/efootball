@@ -2,7 +2,7 @@
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 .header {
@@ -442,34 +442,34 @@
   .player-management-container {
     padding: 15px;
   }
-  
+
   .header h1 {
     font-size: 28px;
   }
-  
+
   .stats-section {
     grid-template-columns: 1fr;
   }
-  
+
   .form-section,
   .players-section {
     padding: 20px;
   }
-  
+
   .form-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 16px;
   }
-  
+
   .players-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .player-actions {
     flex-direction: column;
   }
-  
+
   .modal-content {
     margin: 20px;
   }
@@ -479,16 +479,16 @@
   .player-management-container {
     padding: 10px;
   }
-  
+
   .form-section,
   .players-section {
     padding: 15px;
   }
-  
+
   .stat-card {
     padding: 16px;
   }
-  
+
   .stat-number {
     font-size: 28px;
   }
@@ -501,11 +501,11 @@
   .players-section {
     border: 2px solid #000;
   }
-  
+
   .form-control {
     border-color: #000;
   }
-  
+
   .btn-primary {
     background: #000;
     border: 2px solid #000;
@@ -520,12 +520,62 @@
   .btn-danger:hover:not(:disabled) {
     transform: none;
   }
-  
+
   .loading-spinner {
     animation: none;
   }
-  
+
   .modal-content {
     animation: none;
   }
+}
+/* 
+Loading and Error States */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  text-align: center;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #007bff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-state p {
+  margin: 0;
+  color: #666;
+  font-size: 1rem;
+}
+
+.error-state {
+  margin: 2rem 0;
+}
+
+.error-state .alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.error-state .btn {
+  flex-shrink: 0;
 }

@@ -26,7 +26,7 @@ import { HeaderComponent } from '../header/header.component';
 
       .main-content {
         flex: 1;
-        padding: 2rem 0;
+        padding: 0;
       }
     `,
   ],

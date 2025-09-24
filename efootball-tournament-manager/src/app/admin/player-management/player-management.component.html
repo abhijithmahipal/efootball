@@ -98,69 +98,86 @@
   <div class="players-section">
     <h2>Players List</h2>
 
-    <app-loading-error
-      [customLoading]="isLoading$"
-      [customError]="error$"
-      (retry)="onRetry()"
-      loadingMessage="Loading players..."
-    >
-      <div class="players-content">
-        <div *ngIf="players$ | async as players; else noPlayers">
-          <div *ngIf="players.length > 0; else noPlayers" class="players-grid">
-            <div
-              *ngFor="let player of players; trackBy: trackByPlayerId"
-              class="player-card"
-              [class.inactive]="!isPlayerActive(player)"
-              data-testid="player-item"
-            >
-              <div class="player-info">
-                <div class="player-name">{{ player.name }}</div>
-                <div class="player-status">
-                  <span
-                    class="status-badge"
-                    [class.active]="isPlayerActive(player)"
-                  >
-                    {{ isPlayerActive(player) ? "Active" : "Inactive" }}
-                  </span>
-                </div>
-                <div class="player-date">
-                  Added: {{ player.createdAt | date : "short" }}
-                </div>
-              </div>
+    <!-- Loading State -->
+    <div *ngIf="isLoading$ | async" class="loading-state">
+      <div class="loading-spinner"></div>
+      <p>Loading players...</p>
+    </div>
 
-              <div class="player-actions" *ngIf="isPlayerActive(player)">
-                <button
-                  type="button"
-                  class="btn btn-small btn-secondary"
-                  (click)="editPlayer(player)"
-                  [disabled]="isSubmitting"
-                  data-testid="edit-button"
+    <!-- Error State -->
+    <div *ngIf="error$ | async as error" class="error-state">
+      <div class="alert alert-error">
+        <strong>Error:</strong> {{ error }}
+        <button
+          type="button"
+          class="btn btn-small btn-secondary"
+          (click)="onRetry()"
+        >
+          Retry
+        </button>
+      </div>
+    </div>
+
+    <!-- Players Content -->
+    <div
+      *ngIf="!(isLoading$ | async) && !(error$ | async)"
+      class="players-content"
+    >
+      <div *ngIf="players$ | async as players; else noPlayers">
+        <div *ngIf="players.length > 0; else noPlayers" class="players-grid">
+          <div
+            *ngFor="let player of players; trackBy: trackByPlayerId"
+            class="player-card"
+            [class.inactive]="!isPlayerActive(player)"
+            data-testid="player-item"
+          >
+            <div class="player-info">
+              <div class="player-name">{{ player.name }}</div>
+              <div class="player-status">
+                <span
+                  class="status-badge"
+                  [class.active]="isPlayerActive(player)"
                 >
-                  Edit
-                </button>
-                <button
-                  type="button"
-                  class="btn btn-small btn-danger"
-                  (click)="confirmDelete(player)"
-                  [disabled]="isSubmitting"
-                  data-testid="delete-button"
-                >
-                  Delete
-                </button>
+                  {{ isPlayerActive(player) ? "Active" : "Inactive" }}
+                </span>
               </div>
+              <div class="player-date">
+                Added: {{ getPlayerDate(player.createdAt) | date : "short" }}
+              </div>
+            </div>
+
+            <div class="player-actions" *ngIf="isPlayerActive(player)">
+              <button
+                type="button"
+                class="btn btn-small btn-secondary"
+                (click)="editPlayer(player)"
+                [disabled]="isSubmitting"
+                data-testid="edit-button"
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                class="btn btn-small btn-danger"
+                (click)="confirmDelete(player)"
+                [disabled]="isSubmitting"
+                data-testid="delete-button"
+              >
+                Delete
+              </button>
             </div>
           </div>
         </div>
-
-        <ng-template #noPlayers>
-          <div class="empty-state">
-            <div class="empty-icon">👥</div>
-            <h3>No Players Yet</h3>
-            <p>Add your first player to get started with the tournament.</p>
-          </div>
-        </ng-template>
       </div>
-    </app-loading-error>
+
+      <ng-template #noPlayers>
+        <div class="empty-state">
+          <div class="empty-icon">👥</div>
+          <h3>No Players Yet</h3>
+          <p>Add your first player to get started with the tournament.</p>
+        </div>
+      </ng-template>
+    </div>
   </div>
 
   <!-- Minimum Players Warning -->

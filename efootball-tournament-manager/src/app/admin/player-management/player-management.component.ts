@@ -262,4 +262,30 @@ export class PlayerManagementComponent implements OnInit, OnDestroy {
   trackByPlayerId(index: number, player: Player): string {
     return player.id;
   }
+
+  // Helper method to safely get player date
+  getPlayerDate(createdAt: any): Date {
+    if (!createdAt) {
+      return new Date();
+    }
+
+    // If it's already a Date object
+    if (createdAt instanceof Date) {
+      return createdAt;
+    }
+
+    // If it's a Firestore Timestamp with toDate method
+    if (createdAt && typeof createdAt.toDate === 'function') {
+      return createdAt.toDate();
+    }
+
+    // If it's a timestamp-like object with seconds
+    if (createdAt && typeof createdAt.seconds === 'number') {
+      return new Date(createdAt.seconds * 1000);
+    }
+
+    // Try to parse as string or number
+    const date = new Date(createdAt);
+    return isNaN(date.getTime()) ? new Date() : date;
+  }
 }

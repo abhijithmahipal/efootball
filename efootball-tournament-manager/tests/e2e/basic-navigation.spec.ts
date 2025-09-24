@@ -12,8 +12,8 @@ test.describe('Basic Navigation Tests', () => {
   test('should navigate to admin login', async ({ page }) => {
     await page.goto('/');
 
-    // Click admin link
-    await page.click('[data-testid="admin-link"]');
+    // Click admin link in navigation
+    await page.click('[data-testid="admin-nav-link"]');
 
     // Should redirect to login page
     await expect(page).toHaveURL('/admin/login');
