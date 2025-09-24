@@ -20,7 +20,6 @@ import { AuthService } from '../services/auth.service';
             eFootball Tournament Manager - Admin
           </h1>
           <nav class="admin-nav">
-            <a routerLink="/home" class="nav-link">← Back to Site</a>
             <a
               routerLink="/admin/players"
               class="nav-link"

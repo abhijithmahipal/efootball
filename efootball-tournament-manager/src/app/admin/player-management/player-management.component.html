@@ -145,27 +145,6 @@
                 Added: {{ getPlayerDate(player.createdAt) | date : "short" }}
               </div>
             </div>
-
-            <div class="player-actions" *ngIf="isPlayerActive(player)">
-              <button
-                type="button"
-                class="btn btn-small btn-secondary"
-                (click)="editPlayer(player)"
-                [disabled]="isSubmitting"
-                data-testid="edit-button"
-              >
-                Edit
-              </button>
-              <button
-                type="button"
-                class="btn btn-small btn-danger"
-                (click)="confirmDelete(player)"
-                [disabled]="isSubmitting"
-                data-testid="delete-button"
-              >
-                Delete
-              </button>
-            </div>
           </div>
         </div>
       </div>
